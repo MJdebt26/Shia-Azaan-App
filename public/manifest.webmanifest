@@ -1,4 +1,7 @@
 {
+  "id": "/",
+  "lang": "en",
+  "dir": "ltr",
   "name": "Awqāt — Shia Prayer Times",
   "short_name": "Awqāt",
   "description": "Ja'fari (Shia) prayer times computed locally for your exact location, with a living-sky view, Qibla compass, Qur'an reciters and prayer alerts. Works offline.",

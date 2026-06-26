@@ -29,7 +29,13 @@ const RAW: CityTuple[] = [
   ["Muscat", "Oman", 23.588, 58.3829, "Asia/Muscat"],
   ["Sanaa", "Yemen", 15.3694, 44.191, "Asia/Aden"],
   ["Beirut", "Lebanon", 33.8938, 35.5018, "Asia/Beirut"],
+  ["Nabatieh", "Lebanon", 33.3789, 35.4839, "Asia/Beirut"],
   ["Damascus", "Syria", 33.5138, 36.2765, "Asia/Damascus"],
+  ["Doha", "Qatar", 25.2854, 51.531, "Asia/Qatar"],
+  ["Jeddah", "Saudi Arabia", 21.4858, 39.1925, "Asia/Riyadh"],
+  ["Ahvaz", "Iran", 31.3183, 48.6706, "Asia/Tehran"],
+  ["Kermanshah", "Iran", 34.3142, 47.065, "Asia/Tehran"],
+  ["Karaj", "Iran", 35.8327, 50.9916, "Asia/Tehran"],
   ["Baku", "Azerbaijan", 40.4093, 49.8671, "Asia/Baku"],
   ["Istanbul", "Türkiye", 41.0082, 28.9784, "Europe/Istanbul"],
   ["Kabul", "Afghanistan", 34.5553, 69.2075, "Asia/Kabul"],
@@ -72,15 +78,36 @@ export const CITIES: City[] = RAW.map(([name, country, lat, lng, tz]) => ({
   tz,
 }));
 
+/**
+ * Common alternate spellings / English names, so a search for "Mecca" or
+ * "Turkey" still finds the canonically-named city. Keyed by the city `name`.
+ */
+const ALIASES: Record<string, string[]> = {
+  Makkah: ["mecca", "makka"],
+  Madinah: ["medina", "madina"],
+  Qom: ["ghom", "kum", "qum"],
+  Mashhad: ["meshed"],
+  Isfahan: ["esfahan"],
+  Istanbul: ["turkey", "turkiye"],
+  Mumbai: ["bombay"],
+  Delhi: ["new delhi"],
+  Sanaa: ["sana'a", "sanaá"],
+  "Kuwait City": ["kuwait"],
+};
+
+/** Strip diacritics so "Türkiye" matches a plain "turkiye" query. */
+const fold = (s: string) =>
+  s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export function searchCities(query: string, limit = 40): City[] {
-  const q = query.trim().toLowerCase();
-  const list = q
-    ? CITIES.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.country.toLowerCase().includes(q),
-      )
-    : CITIES;
+  const q = fold(query.trim());
+  if (!q) return CITIES.slice(0, limit);
+  const list = CITIES.filter(
+    (c) =>
+      fold(c.name).includes(q) ||
+      fold(c.country).includes(q) ||
+      (ALIASES[c.name] ?? []).some((a) => a.includes(q)),
+  );
   return list.slice(0, limit);
 }
 

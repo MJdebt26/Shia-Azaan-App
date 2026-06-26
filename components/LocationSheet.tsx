@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { searchCities, type City } from "@/lib/cities";
 
 interface LocationSheetProps {
@@ -22,11 +22,32 @@ export function LocationSheet({
 }: LocationSheetProps) {
   const [q, setQ] = useState("");
   const results = searchCities(q);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  // Close on Escape, and focus the search field when the sheet opens.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const id = window.setTimeout(() => searchRef.current?.focus(), 300);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.clearTimeout(id);
+    };
+  }, [open, onClose]);
 
   return (
     <>
       <div className={`sheet-bg ${open ? "show" : ""}`} onClick={onClose} />
-      <div className={`sheet ${open ? "show" : ""}`}>
+      <div
+        className={`sheet ${open ? "show" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Choose your location"
+        aria-hidden={!open}
+      >
         <div className="grab" />
         <h3>Your location</h3>
         <div className="sh-sub">Prayer times depend on exactly where you are.</div>
@@ -40,9 +61,11 @@ export function LocationSheet({
         <div className="searchbox">
           <span className="ico">🔍</span>
           <input
+            ref={searchRef}
             type="search"
             placeholder="Search a city…"
             autoComplete="off"
+            aria-label="Search a city"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
@@ -51,7 +74,8 @@ export function LocationSheet({
         <div className="results">
           {results.length ? (
             results.map((c) => (
-              <div
+              <button
+                type="button"
                 key={`${c.name}-${c.country}`}
                 className="cityrow"
                 onClick={() => {
@@ -61,7 +85,7 @@ export function LocationSheet({
               >
                 <span className="c">{c.name}</span>
                 <span className="cc">{c.country}</span>
-              </div>
+              </button>
             ))
           ) : (
             <div className="cityrow">

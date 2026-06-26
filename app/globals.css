@@ -274,6 +274,22 @@ body::before {
   margin-top: 2px;
 }
 
+/* progress to next prayer */
+.hero .progress {
+  margin-top: 14px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(245, 239, 227, 0.12);
+  overflow: hidden;
+}
+.hero .progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold-bright));
+  transition: width 0.9s linear;
+}
+
 /* sun path arc */
 .arcwrap {
   position: relative;
@@ -969,8 +985,14 @@ select.set {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   padding: 12px 8px;
+  border: none;
   border-radius: 10px;
+  background: none;
+  color: var(--cream);
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
   transition: 0.12s;
 }

@@ -44,6 +44,8 @@ interface SkyHeroProps {
   nextMeta: PrayerMeta;
   nextTime: FormattedTime;
   countdown: string;
+  /** Fraction [0,1] elapsed through the current interval. */
+  progress: number;
   // arc inputs
   lat: number;
   lng: number;
@@ -61,6 +63,7 @@ export function SkyHero({
   nextMeta,
   nextTime,
   countdown,
+  progress,
   lat,
   lng,
   off,
@@ -153,6 +156,16 @@ export function SkyHero({
             <div className="lab">Begins in</div>
             <div className="val">{countdown}</div>
           </div>
+        </div>
+        <div
+          className="progress"
+          role="progressbar"
+          aria-label="Progress to next prayer"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress * 100)}
+        >
+          <span style={{ width: `${(progress * 100).toFixed(1)}%` }} />
         </div>
       </div>
 

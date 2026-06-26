@@ -22,7 +22,7 @@ import { useInstallPrompt } from "@/hooks/useInstallPrompt";
 
 import { compute, qibla } from "@/lib/prayer";
 import { currentPrayerIndex, nextPrayer } from "@/lib/derive";
-import { ALERT_PRAYERS } from "@/lib/constants";
+import { ALERT_PRAYERS, PRAYERS } from "@/lib/constants";
 import { DEFAULT_CITY, type City } from "@/lib/cities";
 import { RECITERS } from "@/lib/reciters";
 import { store } from "@/lib/store";
@@ -117,6 +117,19 @@ export default function PrayerApp() {
     return compute(new Date(y, m - 1, d), loc.lat, loc.lng, off, method);
   }, [loc, method, dayKey, off]);
 
+  // Discrete solar phase, used to tint the PWA status bar to match the hero.
+  const themePhase = times ? skyPhase(nowH, times) : null;
+  useEffect(() => {
+    if (!themePhase) return;
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", skyColors(themePhase)[0]);
+  }, [themePhase]);
+
   // --- in-app prayer alert (banner + sound + notification) ---
   useEffect(() => {
     if (!mounted || !loc || !times || !alertsOn) return;
@@ -198,6 +211,15 @@ export default function PrayerApp() {
   const nextLabel = currentIndex === -1 ? "Next · Fajr begins" : "Next prayer";
   const phase = skyPhase(nowH, times);
 
+  // Fraction elapsed through the current interval (previous boundary → next
+  // prayer). Before today's Fajr, the interval runs from yesterday's Isha.
+  const prevHour =
+    currentIndex === -1 ? times.isha - 24 : times[PRAYERS[currentIndex].key];
+  const progress = Math.max(
+    0,
+    Math.min(1, (nowH - prevHour) / (next.hour - prevHour)),
+  );
+
   return (
     <main className="wrap">
       <TopBar
@@ -214,6 +236,7 @@ export default function PrayerApp() {
         nextMeta={next.meta as PrayerMeta}
         nextTime={fmtTime(next.hour % 24, fmt24)}
         countdown={fmtSpan((next.hour - nowH) * 60)}
+        progress={progress}
         lat={loc.lat}
         lng={loc.lng}
         off={off}

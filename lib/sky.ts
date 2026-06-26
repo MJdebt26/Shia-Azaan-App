@@ -44,12 +44,12 @@ export function starsVisible(phase: Phase): boolean {
 
 export function greeting(now: number, t: Times): string {
   const g =
-    now < t.sunrise
-      ? "Dawn is near"
-      : now < 11
-        ? "Good morning"
-        : now < t.dhuhr + 3
-          ? "Good afternoon"
+    now < t.fajr
+      ? "A blessed night"
+      : now < t.sunrise
+        ? "Dawn is near"
+        : now < t.dhuhr
+          ? "Good morning"
           : now < t.sunset
             ? "Good afternoon"
             : "Good evening";
