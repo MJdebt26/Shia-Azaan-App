@@ -2,7 +2,7 @@
   "name": "awqat-prayer-times",
   "version": "2.0.0",
   "private": true,
-  "description": "Awqāt — Ja'fari (Shia) prayer times PWA: local astronomy, Qibla compass, built-in adhan library, and prayer notifications that actually fire.",
+  "description": "Awq\u0101t \u2014 Ja'fari (Shia) prayer times PWA: local astronomy, Qibla compass, built-in adhan library, and prayer notifications that actually fire.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "vapid": "node scripts/generate-vapid.mjs"
+    "vapid": "node scripts/generate-vapid.mjs",
+    "vercel-env": "node scripts/print-vercel-env.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.1.0",
