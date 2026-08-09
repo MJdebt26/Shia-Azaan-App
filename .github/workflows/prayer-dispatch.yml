@@ -1,0 +1,71 @@
+# Fires the prayer-alert dispatcher on a schedule.
+#
+# Why this exists instead of a Vercel cron: Vercel's Hobby (free) plan rejects
+# any cron expression that runs more than once a day — a per-minute schedule
+# fails the deployment outright. GitHub Actions runs this for free on a repo you
+# already have, with no third-party signup.
+#
+# Setup (once):
+#   1. Deploy the app, then add two repository secrets under
+#      Settings → Secrets and variables → Actions:
+#        APP_URL       https://your-app.vercel.app     (no trailing slash)
+#        CRON_SECRET   the same value set in Vercel's environment variables
+#   2. That's it — the schedule below starts on the next push to the default
+#      branch.
+#
+# Precision, honestly: GitHub's scheduler has a five-minute floor and is
+# best-effort — under load a run can be delayed, and it is not guaranteed. So an
+# alert can arrive a few minutes late. If you need to-the-minute delivery, point
+# a dedicated cron service (cron-job.org is free and does one-minute intervals)
+# at the same endpoint with the same Authorization header, or use a Vercel Pro
+# cron. The dispatcher is idempotent — it de-duplicates per prayer per day — so
+# it is safe to call from several schedulers at once.
+
+name: Dispatch prayer notifications
+
+on:
+  schedule:
+    # Every 5 minutes — the shortest interval GitHub Actions supports.
+    - cron: "*/5 * * * *"
+  # Lets you fire one manually from the Actions tab to test the wiring.
+  workflow_dispatch:
+
+# If a run overruns its slot, don't pile another on top of it.
+concurrency:
+  group: prayer-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the dispatcher
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::APP_URL and CRON_SECRET repository secrets must both be set."
+            exit 1
+          fi
+
+          # -sS keeps it quiet but still prints real errors.
+          # Separating the body from the status code lets us log what the
+          # endpoint actually said when it refuses.
+          response=$(curl -sS -m 30 -w '\n%{http_code}' \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${APP_URL}/api/cron/dispatch")
+
+          status=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+
+          echo "status: ${status}"
+          echo "body:   ${body}"
+
+          if [ "$status" != "200" ]; then
+            echo "::error::Dispatcher returned ${status}. A 401 means CRON_SECRET does not match the one in Vercel; a 503 means the VAPID keys are not configured."
+            exit 1
+          fi

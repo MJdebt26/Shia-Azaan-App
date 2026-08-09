@@ -159,7 +159,33 @@ Then set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`,
 production, add an Upstash Redis (`UPSTASH_REDIS_REST_URL` /
 `UPSTASH_REDIS_REST_TOKEN`) so subscriptions survive serverless cold starts —
 without it the store falls back to memory and says so, loudly, in the logs.
-`vercel.json` already schedules `/api/cron/dispatch` every minute.
+
+### Driving the dispatcher
+
+`/api/cron/dispatch` has to be called regularly for alerts to go out while the
+app is closed. It is authenticated with `CRON_SECRET` and is **idempotent** — it
+de-duplicates per prayer per day — so it is safe to call from more than one
+scheduler.
+
+**Vercel's own cron will not do this on the free plan.** Hobby accounts reject
+any expression that runs more than once a day; `* * * * *` fails the deployment
+outright, and even a permitted daily job has ±59 minutes of slop. `vercel.json`
+therefore ships with no cron. Pick a driver:
+
+| Driver | Cost | Precision | Setup |
+| --- | --- | --- | --- |
+| **GitHub Actions** (included, `.github/workflows/prayer-dispatch.yml`) | Free | ~5 min, best-effort | Add `APP_URL` and `CRON_SECRET` repo secrets |
+| **cron-job.org** or similar | Free | 1 min | Point it at the endpoint with the `Authorization` header |
+| **Vercel Cron** | Pro ($20/mo) | 1 min | Add `crons` back to `vercel.json` with `* * * * *` |
+
+To re-enable the native Vercel cron on Pro:
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [{ "path": "/api/cron/dispatch", "schedule": "* * * * *" }]
+}
+```
 
 ---
 
