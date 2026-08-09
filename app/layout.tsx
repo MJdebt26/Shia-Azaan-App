@@ -1,21 +1,28 @@
 import type { Metadata, Viewport } from "next";
 
-// Self-hosted fonts (installed from npm) — work offline, no external CDN.
+// Self-hosted from npm so the UI renders correctly offline and no request
+// ever leaves the device for a font.
 import "@fontsource-variable/manrope";
 import "@fontsource/amiri/400.css";
 import "@fontsource/amiri/700.css";
 import "./globals.css";
 
+import { APP_NAME } from "@/lib/constants";
+
 export const metadata: Metadata = {
-  title: "Awqāt — Shia Prayer Times",
+  metadataBase: new URL("https://awqat.app"),
+  title: {
+    default: "Awqāt — Shia Prayer Times",
+    template: "%s · Awqāt",
+  },
   description:
-    "Ja'fari (Shia) prayer times computed locally for your exact location, with a living-sky view, Qibla compass, Qur'an reciters and prayer alerts. Works offline.",
-  applicationName: "Awqāt",
+    "Ja'fari (Shia) prayer times computed on your device for your exact coordinates. Living sky view, Qibla compass, built-in adhan library and prayer notifications that actually arrive. Works offline.",
+  applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Awqāt",
+    title: APP_NAME,
   },
   icons: {
     icon: [
@@ -25,14 +32,31 @@ export const metadata: Metadata = {
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
   formatDetection: { telephone: false },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // The hero bleeds into the notch area on iPhone.
   viewportFit: "cover",
-  themeColor: "#0B1026",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0A0E1F" },
+    { media: "(prefers-color-scheme: light)", color: "#F7F3EB" },
+  ],
 };
+
+/**
+ * Applied before first paint so a stored light theme never flashes dark.
+ * Kept tiny and dependency-free on purpose.
+ */
+const THEME_BOOTSTRAP = `(function(){try{
+var s=localStorage.getItem('awqat.theme')||'system';
+var d=s==='dark'||(s==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
+document.documentElement.setAttribute('data-theme',d?'dark':'light');
+}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
 
 export default function RootLayout({
   children,
@@ -40,9 +64,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark" suppressHydrationWarning>
       <head>
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body>{children}</body>
     </html>

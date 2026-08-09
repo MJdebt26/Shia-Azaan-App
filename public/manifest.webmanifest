@@ -4,13 +4,13 @@
   "dir": "ltr",
   "name": "Awqāt — Shia Prayer Times",
   "short_name": "Awqāt",
-  "description": "Ja'fari (Shia) prayer times computed locally for your exact location, with a living-sky view, Qibla compass, Qur'an reciters and prayer alerts. Works offline.",
+  "description": "Ja'fari (Shia) prayer times computed on your device, with a living-sky view, Qibla compass, a built-in adhan library, and prayer notifications that actually arrive. Works offline.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0B1026",
-  "theme_color": "#0B1026",
+  "background_color": "#0A0E1F",
+  "theme_color": "#0A0E1F",
   "categories": ["lifestyle", "utilities"],
   "icons": [
     {
@@ -30,6 +30,13 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Qibla compass",
+      "short_name": "Qibla",
+      "url": "/?tab=qibla"
     }
   ]
 }

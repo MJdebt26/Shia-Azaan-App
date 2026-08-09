@@ -1,99 +1,112 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { Sheet } from "./ui/Sheet";
+import { Callout } from "./ui/Controls";
+import { IconPin, IconSearch, IconWarn } from "./ui/Icon";
 import { searchCities, type City } from "@/lib/cities";
+import type { Loc } from "@/lib/types";
 
 interface LocationSheetProps {
   open: boolean;
   onClose: () => void;
+  current: Loc;
+  onSelect: (loc: Loc) => void;
   locating: boolean;
-  gpsError: string | null;
+  error: string | null;
   onUseGPS: () => void;
-  onSelectCity: (city: City) => void;
 }
 
 export function LocationSheet({
   open,
   onClose,
+  current,
+  onSelect,
   locating,
-  gpsError,
+  error,
   onUseGPS,
-  onSelectCity,
 }: LocationSheetProps) {
-  const [q, setQ] = useState("");
-  const results = searchCities(q);
-  const searchRef = useRef<HTMLInputElement>(null);
-
-  // Close on Escape, and focus the search field when the sheet opens.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const id = window.setTimeout(() => searchRef.current?.focus(), 300);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      window.clearTimeout(id);
-    };
-  }, [open, onClose]);
+  const [query, setQuery] = useState("");
+  const results = useMemo(() => searchCities(query, 60), [query]);
 
   return (
-    <>
-      <div className={`sheet-bg ${open ? "show" : ""}`} onClick={onClose} />
-      <div
-        className={`sheet ${open ? "show" : ""}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Choose your location"
-        aria-hidden={!open}
-      >
-        <div className="grab" />
-        <h3>Your location</h3>
-        <div className="sh-sub">Prayer times depend on exactly where you are.</div>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Your location"
+      description="Prayer times depend on exactly where you are."
+      sticky={
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={onUseGPS}
+            disabled={locating}
+            className="btn btn-primary w-full disabled:opacity-60"
+          >
+            <IconPin size={17} />
+            {locating ? "Locating…" : "Use my current location"}
+          </button>
 
-        <button className="gpsbtn" onClick={onUseGPS} disabled={locating}>
-          <span>{locating ? "◌" : "📍"}</span>{" "}
-          {locating ? "Locating…" : "Use my current location"}
-        </button>
-        {gpsError && <div className="gpserr show">{gpsError}</div>}
-
-        <div className="searchbox">
-          <span className="ico">🔍</span>
-          <input
-            ref={searchRef}
-            type="search"
-            placeholder="Search a city…"
-            autoComplete="off"
-            aria-label="Search a city"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-        </div>
-
-        <div className="results">
-          {results.length ? (
-            results.map((c) => (
-              <button
-                type="button"
-                key={`${c.name}-${c.country}`}
-                className="cityrow"
-                onClick={() => {
-                  onSelectCity(c);
-                  setQ("");
-                }}
-              >
-                <span className="c">{c.name}</span>
-                <span className="cc">{c.country}</span>
-              </button>
-            ))
-          ) : (
-            <div className="cityrow">
-              <span className="cc">No match — try the GPS button above.</span>
-            </div>
+          {error && (
+            <Callout tone="warn" icon={<IconWarn size={15} />}>
+              {error}
+            </Callout>
           )}
+
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint">
+              <IconSearch size={17} />
+            </span>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search a city…"
+              aria-label="Search for a city"
+              autoComplete="off"
+              className="w-full rounded-xl border border-line-strong bg-surface-2 py-3 pl-11 pr-3 text-[14px] text-ink placeholder:text-faint/70"
+            />
+          </div>
         </div>
-      </div>
-    </>
+      }
+    >
+      {results.length > 0 ? (
+        <ul className="pb-2" role="listbox" aria-label="Cities">
+          {results.map((c: City) => {
+            const active =
+              c.name === current.name && c.country === current.country;
+            return (
+              <li key={`${c.name}-${c.country}`}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  onClick={() => {
+                    onSelect({ ...c, source: "city" });
+                    setQuery("");
+                    onClose();
+                  }}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
+                    active ? "bg-accent/10" : "hover:bg-surface-2"
+                  }`}
+                >
+                  <span className="truncate text-[14.5px] font-semibold">
+                    {c.name}
+                  </span>
+                  <span className="flex-shrink-0 text-[11.5px] text-faint">
+                    {c.country}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="py-8 text-center text-[13px] text-faint">
+          No city matches “{query}”. Try the location button above — it works
+          anywhere, not just in listed cities.
+        </p>
+      )}
+    </Sheet>
   );
 }

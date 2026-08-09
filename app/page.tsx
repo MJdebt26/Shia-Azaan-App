@@ -1,5 +1,5 @@
-import PrayerApp from "@/components/PrayerApp";
+import AwqatApp from "@/components/AwqatApp";
 
 export default function Page() {
-  return <PrayerApp />;
+  return <AwqatApp />;
 }

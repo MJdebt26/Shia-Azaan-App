@@ -1,30 +1,38 @@
 {
   "name": "awqat-prayer-times",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Awqat - Shia (Ja'fari) prayer times PWA with GPS, Qibla, reciters and prayer alerts.",
+  "description": "Awqāt — Ja'fari (Shia) prayer times PWA: local astronomy, Qibla compass, built-in adhan library, and prayer notifications that actually fire.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "vapid": "node scripts/generate-vapid.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.1.0",
     "@fontsource/amiri": "^5.1.0",
-    "next": "^15.5.19",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
-    "@types/react": "^18.3.0",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.20",
-    "eslint": "^8.57.1",
-    "eslint-config-next": "^15.5.19",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.10"
   }
 }
