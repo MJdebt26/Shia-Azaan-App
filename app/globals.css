@@ -209,11 +209,22 @@
 
 @layer components {
   /* --- surfaces --------------------------------------------------------- */
+  /*
+   * No backdrop-filter here, deliberately.
+   *
+   * Settings stacks four of these down a 3000px page, and on iOS every one is a
+   * full-width backdrop the compositor re-rasterises on each scroll frame —
+   * enough together to make the page feel like it will not scroll at all.
+   * A filtered ancestor also becomes the containing block for `position: fixed`
+   * descendants, which was silently breaking any sheet rendered inside a card.
+   *
+   * The surface sits at 4.5% opacity over a near-solid background, so the blur
+   * was buying almost nothing visually. It is not worth either cost.
+   */
   .card {
     background: rgb(var(--c-surface));
     border: 1px solid rgb(var(--c-border));
     border-radius: 20px;
-    backdrop-filter: blur(12px);
   }
 
   .section-label {

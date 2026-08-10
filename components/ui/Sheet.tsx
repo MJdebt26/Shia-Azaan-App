@@ -5,8 +5,10 @@ import {
   useEffect,
   useId,
   useRef,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { IconClose } from "./Icon";
 
 /**
@@ -59,6 +61,10 @@ function lockBodyScroll(): () => void {
   };
 }
 
+const subscribeNoop = (): (() => void) => () => {};
+const onClient = (): boolean => true;
+const onServer = (): boolean => false;
+
 export function Sheet({
   open,
   onClose,
@@ -71,6 +77,8 @@ export function Sheet({
   const restoreTo = useRef<HTMLElement | null>(null);
   const titleId = useId();
   const descId = useId();
+  // Portals need a DOM; render nothing until we are on the client.
+  const mounted = useSyncExternalStore(subscribeNoop, onClient, onServer);
 
   /**
    * Callers pass `onClose` as an inline arrow, so it is a new function on every
@@ -143,13 +151,29 @@ export function Sheet({
     };
   }, [open, handleKeyDown]);
 
-  return (
+  if (!mounted) return null;
+
+  /**
+   * Rendered into <body>, not in place.
+   *
+   * `.card` carries a backdrop-filter, and any filtered ancestor becomes the
+   * containing block for `position: fixed` descendants. The adhan picker lives
+   * inside the alerts card, so its "fixed" scrim and panel were being sized and
+   * positioned against that card rather than the viewport — one scrim measured
+   * 343x2311 instead of covering the screen. A portal puts both back on the
+   * viewport where a modal belongs, whatever it happens to be nested inside.
+   */
+  return createPortal(
     <>
       <div
         onClick={onClose}
         aria-hidden="true"
-        className={`fixed inset-0 z-40 bg-bg-deep/70 backdrop-blur-sm transition-opacity duration-200 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
+        className={`fixed inset-0 z-40 bg-bg-deep/70 transition-opacity duration-200 ${
+          // The blur is attached only while the sheet is open. A closed scrim
+          // is invisible but `opacity: 0` does not stop iOS rasterising a
+          // full-screen backdrop blur on every frame, and two of these (one per
+          // mounted sheet) is enough to make the page feel unscrollable.
+          open ? "backdrop-blur-sm opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
       <div
@@ -199,6 +223,7 @@ export function Sheet({
           {children}
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }
