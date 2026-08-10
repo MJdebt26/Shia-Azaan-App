@@ -30,6 +30,35 @@ interface SheetProps {
 const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
+/**
+ * Body-scroll lock, reference-counted at module scope.
+ *
+ * Two sheets are mounted at once (the location picker and the adhan picker) and
+ * both reach for the same `document.body.style.overflow`. With each one saving
+ * and restoring its own idea of the original value, an unlucky interleaving
+ * leaves the body stuck at `overflow: hidden` and the whole page unscrollable
+ * with no sheet on screen to explain it. A counter makes the lock idempotent:
+ * the first caller saves and locks, the last one restores.
+ */
+let lockCount = 0;
+let savedOverflow = "";
+
+function lockBodyScroll(): () => void {
+  if (lockCount === 0) {
+    savedOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+  }
+  lockCount += 1;
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    lockCount = Math.max(0, lockCount - 1);
+    if (lockCount === 0) document.body.style.overflow = savedOverflow;
+  };
+}
+
 export function Sheet({
   open,
   onClose,
@@ -43,66 +72,74 @@ export function Sheet({
   const titleId = useId();
   const descId = useId();
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab") return;
+  /**
+   * Callers pass `onClose` as an inline arrow, so it is a new function on every
+   * render — and the app re-renders every second to tick the countdown. Reading
+   * it through a ref keeps the effect below dependent on `open` alone.
+   *
+   * That matters more than it looks: when the effect re-ran every second, its
+   * cleanup called `restoreTo.current.focus()` each time, which pulled focus out
+   * of the city search box a second after you tapped it and closed the keyboard.
+   * Typing a location was impossible on a phone for exactly this reason.
+   */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
-      const panel = panelRef.current;
-      if (!panel) return;
-      const items = Array.from(
-        panel.querySelectorAll<HTMLElement>(FOCUSABLE),
-      ).filter((el) => el.offsetParent !== null);
-      if (!items.length) return;
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onCloseRef.current();
+      return;
+    }
+    if (e.key !== "Tab") return;
 
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const items = Array.from(
+      panel.querySelectorAll<HTMLElement>(FOCUSABLE),
+    ).filter((el) => el.offsetParent !== null);
+    if (!items.length) return;
 
-      if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    },
-    [onClose],
-  );
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+
+    if (e.shiftKey && active === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) return;
 
     restoreTo.current = document.activeElement as HTMLElement | null;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
+    const releaseScroll = lockBodyScroll();
     document.addEventListener("keydown", handleKeyDown);
 
     // Move focus into the sheet once the entry transition has settled, but to
-    // the panel itself — never to the first control.
-    //
-    // Focusing the first button used to fire 220ms after open, which is exactly
-    // when a user has already tapped the city search box. It yanked focus off
-    // the input and closed the keyboard mid-tap, so typing a location was
-    // impossible on a phone. The panel is `tabIndex={-1}`, so focusing it keeps
-    // the focus trap and screen-reader context without touching any control.
+    // the panel itself rather than to its first control — and never if the user
+    // has already put focus somewhere inside, which on a phone means they have
+    // tapped the search box and are waiting for the keyboard.
     const id = window.setTimeout(() => {
       const panel = panelRef.current;
       if (!panel) return;
-      // If the user got there first, leave their focus exactly where it is.
       if (panel.contains(document.activeElement)) return;
       panel.focus();
     }, 220);
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = overflow;
+      releaseScroll();
       window.clearTimeout(id);
-      restoreTo.current?.focus?.();
+      // Only meaningful on a real close, which is the only time this runs now.
+      const previous = restoreTo.current;
+      if (previous && previous.isConnected) previous.focus();
     };
   }, [open, handleKeyDown]);
 
