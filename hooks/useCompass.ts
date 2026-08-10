@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 /**
  * Live compass heading for the Qibla view.
@@ -64,6 +70,32 @@ const NO_READING_MS = 3000;
 
 const DEG = Math.PI / 180;
 
+/**
+ * What this runtime can do, as one stable string.
+ *
+ *  - `server` — rendered without a window; promise nothing.
+ *  - `none`   — no DeviceOrientationEvent at all (most desktops).
+ *  - `gated`  — iOS: events only flow after requestPermission() in a gesture.
+ *  - `open`   — Android/desktop with sensors: just add the listener.
+ */
+type CompassCapability = "server" | "none" | "gated" | "open";
+
+/** Capability cannot change without a reload, so there is nothing to subscribe to. */
+function subscribeCapability(): () => void {
+  return () => {};
+}
+
+/** Must be referentially stable per call — a string literal always is. */
+function readCapability(): CompassCapability {
+  const ctor = orientationEventCtor();
+  if (!ctor) return "none";
+  return typeof ctor.requestPermission === "function" ? "gated" : "open";
+}
+
+function readServerCapability(): CompassCapability {
+  return "server";
+}
+
 function orientationEventCtor(): DeviceOrientationEventCtor | null {
   if (typeof window === "undefined") return null;
   if (typeof window.DeviceOrientationEvent === "undefined") return null;
@@ -104,18 +136,28 @@ function angleDelta(a: number, b: number): number {
 }
 
 export function useCompass(): UseCompass {
-  const [supported] = useState(() => orientationEventCtor() !== null);
-  // Lazy initialiser rather than an effect: it keeps the first client render
-  // truthful without a set-state-in-effect round trip. During SSR there is no
-  // window, so this is false and the button simply appears after hydration.
-  const [needsPermission, setNeedsPermission] = useState(
-    () => typeof orientationEventCtor()?.requestPermission === "function",
+  // Read through useSyncExternalStore rather than a useState lazy initialiser.
+  // The initialiser approach returned one value on the server (no window, so
+  // "none") and another during hydration (on iOS, "gated") — a hydration
+  // mismatch that left the "Enable live compass" button missing or inert on
+  // real iPhones, which is precisely where it is the only way to get a heading.
+  // useSyncExternalStore is built for exactly this: render the server snapshot,
+  // then re-render safely with the client's.
+  const capability = useSyncExternalStore(
+    subscribeCapability,
+    readCapability,
+    readServerCapability,
   );
-  const [listening, setListening] = useState(
-    () =>
-      orientationEventCtor() !== null &&
-      typeof orientationEventCtor()?.requestPermission !== "function",
-  );
+
+  // Set once the user has actually granted motion access this session.
+  const [granted, setGranted] = useState(false);
+
+  const supported = capability === "gated" || capability === "open";
+  const needsPermission = capability === "gated" && !granted;
+  // "open" browsers (Android, desktop) stream without asking; iOS only after
+  // the grant.
+  const listening = capability === "open" || granted;
+
   const [heading, setHeading] = useState<number | null>(null);
   const [accuracy, setAccuracy] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -204,16 +246,14 @@ export function useCompass(): UseCompass {
       return;
     }
     if (typeof ctor.requestPermission !== "function") {
-      setNeedsPermission(false);
-      setListening(true);
+      setGranted(true);
       return;
     }
     try {
       const result = await ctor.requestPermission();
       if (result === "granted") {
-        setNeedsPermission(false);
         setError(null);
-        setListening(true);
+        setGranted(true);
       } else {
         setError(
           "Motion & orientation access was denied. Enable it in Settings › Apps › Safari › Motion & Orientation Access, then reload.",

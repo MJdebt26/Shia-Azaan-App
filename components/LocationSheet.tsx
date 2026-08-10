@@ -64,7 +64,7 @@ export function LocationSheet({
               placeholder="Search a city…"
               aria-label="Search for a city"
               autoComplete="off"
-              className="w-full rounded-xl border border-line-strong bg-surface-2 py-3 pl-11 pr-3 text-[14px] text-ink placeholder:text-faint/70"
+              className="w-full rounded-xl border border-line-strong bg-surface-2 py-3 pl-11 pr-3 text-[16px] text-ink placeholder:text-faint/70"
             />
           </div>
         </div>

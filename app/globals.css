@@ -90,6 +90,51 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /*
+   * iOS Safari zooms the page in whenever a focused form control has a font
+   * size under 16px, and it does not zoom back out afterwards — which is what
+   * made the city search unusable and left Settings stuck at the wrong scale.
+   * 16px is the floor, not a design choice. Declared with a specificity Tailwind
+   * utilities cannot silently undo, because a single `text-[14px]` on one input
+   * is enough to bring the whole bug back.
+   */
+  input:where(:not([type="checkbox"], [type="radio"], [type="range"])),
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+
+  /*
+   * Kills the double-tap-to-zoom gesture on controls. Without it, tapping (or
+   * scrolling over) steppers and segmented buttons in Settings makes iOS wait
+   * for a possible second tap and then zoom instead of scrolling.
+   */
+  button,
+  [role="button"],
+  [role="switch"],
+  a,
+  label,
+  summary,
+  input,
+  select {
+    touch-action: manipulation;
+  }
+
+  /*
+   * The layout bleeds under the notch because the viewport is `viewport-fit:
+   * cover` (needed so the hero reaches the screen edges). Anything with real
+   * content at the top has to add the inset back.
+   */
+  .app-main {
+    padding-top: max(1.25rem, calc(env(safe-area-inset-top) + 0.75rem));
+  }
+
+  @media (min-width: 640px) {
+    .app-main {
+      padding-top: max(1.75rem, calc(env(safe-area-inset-top) + 0.75rem));
+    }
+  }
+
   body {
     min-height: 100dvh;
     background-color: rgb(var(--c-bg));

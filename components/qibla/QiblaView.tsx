@@ -2,7 +2,7 @@
 
 import { compassPoint, qiblaBearing, qiblaDistanceKm } from "@/lib/prayer/qibla";
 import { Callout, Card } from "@/components/ui/Controls";
-import { IconInfo, IconWarn } from "@/components/ui/Icon";
+import { IconCompass, IconInfo, IconWarn } from "@/components/ui/Icon";
 import type { Loc } from "@/lib/types";
 
 interface QiblaViewProps {
@@ -126,9 +126,23 @@ export function QiblaView({
           )}
 
           {needsPermission && supported && (
-            <button type="button" onClick={onEnable} className="btn btn-quiet mt-4">
-              Enable live compass
-            </button>
+            <div className="mt-4 w-full">
+              <button
+                type="button"
+                onClick={onEnable}
+                className="btn btn-primary w-full"
+              >
+                <IconCompass size={17} />
+                Enable live compass
+              </button>
+              {/* iOS shows its own permission sheet; say so, or the extra
+                  prompt looks like the app misfiring. */}
+              <p className="mt-2 text-[11px] leading-snug text-faint">
+                Your device will ask for motion &amp; orientation access. Until
+                then the bearing above is still correct — it just will not
+                follow you as you turn.
+              </p>
+            </div>
           )}
         </div>
       </Card>

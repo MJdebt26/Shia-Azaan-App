@@ -73,7 +73,7 @@ export function CalculationCard({
         value={calc.method}
         onChange={(e) => set({ method: e.target.value as MethodKey })}
         aria-label="Calculation method"
-        className="w-full appearance-none rounded-xl border border-line-strong bg-surface-2 px-3 py-2.5 text-[13.5px] font-semibold text-ink"
+        className="w-full appearance-none rounded-xl border border-line-strong bg-surface-2 px-3 py-2.5 text-[16px] font-semibold text-ink"
       >
         <optgroup label="Ja'fari (Shia)">
           {JAFARI_METHODS.map((k) => (

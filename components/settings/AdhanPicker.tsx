@@ -174,7 +174,7 @@ export function AdhanPicker({
               placeholder="https://example.com/adhan.mp3"
               value={draftUrl}
               onChange={(e) => setDraftUrl(e.target.value)}
-              className="w-full rounded-xl border border-line-strong bg-surface-2 px-3 py-2.5 text-[13px] text-ink placeholder:text-faint/60"
+              className="w-full rounded-xl border border-line-strong bg-surface-2 px-3 py-2.5 text-[16px] text-ink placeholder:text-faint/60"
             />
             <p className="text-[11px] leading-snug text-faint">
               Served over HTTPS as a direct file link. Unlike the built-in
