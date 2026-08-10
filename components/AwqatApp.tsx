@@ -318,7 +318,7 @@ export default function AwqatApp() {
       {/* The page-wide colour wash that follows the sun and the weather. */}
       <div className="sky-ambient" aria-hidden="true" />
 
-      <main className="app-main relative z-10 mx-auto max-w-app px-4 pb-24">
+      <main className="app-main relative z-10 mx-auto max-w-app px-4">
         <Header
           greeting={greeting(view.nowH, view.times)}
           locationName={loc.name}

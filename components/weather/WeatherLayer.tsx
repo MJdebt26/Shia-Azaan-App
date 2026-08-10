@@ -18,33 +18,72 @@ interface WeatherLayerProps {
   night: boolean;
 }
 
-/** Drifting cloud bands. Two layers at different speeds reads as depth. */
+/**
+ * Drifting cloud.
+ *
+ * Three bands at different depths, speeds and opacities. Each is built from
+ * five overlapping radial blobs of varying size — a single ellipse blurs into
+ * a smudge, whereas a lumpy silhouette still reads as cloud once blurred.
+ * Daylight clouds are lit near-white; at night they are dim and slightly blue,
+ * because an overcast night sky is a glow, not a highlight.
+ */
 function Clouds({ opacity, night }: { opacity: number; night: boolean }) {
   if (opacity <= 0.01) return null;
-  const tint = night ? "255,255,255" : "255,255,255";
+
+  const tint = night ? "184,198,224" : "255,255,255";
+
+  const bands = [
+    { top: "-6%", dur: "96s", alpha: night ? 0.1 : 0.26, scale: 1.35 },
+    { top: "10%", dur: "68s", alpha: night ? 0.13 : 0.3, scale: 1 },
+    { top: "30%", dur: "132s", alpha: night ? 0.07 : 0.17, scale: 1.7 },
+  ];
+
+  // Five blobs per band: sizes and offsets chosen to overlap unevenly.
+  const blobs = [
+    { w: 46, h: 150, x: 4, y: 52 },
+    { w: 34, h: 120, x: 26, y: 38 },
+    { w: 52, h: 165, x: 48, y: 58 },
+    { w: 30, h: 108, x: 71, y: 40 },
+    { w: 40, h: 132, x: 88, y: 55 },
+  ];
+
   return (
     <div
       className="pointer-events-none absolute inset-0 overflow-hidden"
       style={{ opacity }}
       aria-hidden="true"
     >
-      {[
-        { top: "4%", dur: "68s", scale: 1, alpha: night ? 0.1 : 0.22 },
-        { top: "26%", dur: "104s", scale: 1.5, alpha: night ? 0.07 : 0.15 },
-      ].map((band, i) => (
-        <div
-          key={i}
-          className="weather-cloud-band"
-          style={{
-            top: band.top,
-            animationDuration: band.dur,
-            // Two soft ellipses per band; cheap, and reads as cloud at blur.
-            backgroundImage: `radial-gradient(closest-side, rgba(${tint},${band.alpha}) 0%, rgba(${tint},0) 100%), radial-gradient(closest-side, rgba(${tint},${band.alpha * 0.8}) 0%, rgba(${tint},0) 100%)`,
-            backgroundSize: `${46 * band.scale}% ${150 * band.scale}%, ${34 * band.scale}% ${120 * band.scale}%`,
-            backgroundPosition: "8% 50%, 62% 40%",
-          }}
-        />
-      ))}
+      {bands.map((band, i) => {
+        const image = blobs
+          .map(
+            (_, j) =>
+              `radial-gradient(closest-side, rgba(${tint},${(
+                band.alpha *
+                (1 - j * 0.09)
+              ).toFixed(3)}) 0%, rgba(${tint},0) 100%)`,
+          )
+          .join(", ");
+        const size = blobs
+          .map((b) => `${b.w * band.scale}% ${b.h * band.scale}%`)
+          .join(", ");
+        const position = blobs.map((b) => `${b.x}% ${b.y}%`).join(", ");
+
+        return (
+          <div
+            key={i}
+            className="weather-cloud-band"
+            style={{
+              top: band.top,
+              animationDuration: band.dur,
+              // Offset each band's phase so they never line up.
+              animationDelay: `${i * -19}s`,
+              backgroundImage: image,
+              backgroundSize: size,
+              backgroundPosition: position,
+            }}
+          />
+        );
+      })}
     </div>
   );
 }

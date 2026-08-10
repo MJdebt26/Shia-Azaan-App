@@ -4,6 +4,7 @@ import {
   baseSpeed,
   createField,
   createParticle,
+  gustAt,
   particleCount,
   slantFor,
   stepField,
@@ -202,5 +203,42 @@ describe("streak geometry", () => {
     expect(Math.hypot(rb.x2 - rb.x1, rb.y2 - rb.y1)).toBeLessThan(
       Math.hypot(ra.x2 - ra.x1, ra.y2 - ra.y1),
     );
+  });
+});
+
+describe("wind gusts", () => {
+  it("stays within sane bounds over a long run", () => {
+    for (let t = 0; t < 600; t += 0.37) {
+      const g = gustAt(t);
+      expect(g).toBeGreaterThanOrEqual(0.55);
+      expect(g).toBeLessThanOrEqual(1.45);
+    }
+  });
+
+  it("actually varies — a constant would look fake", () => {
+    const samples = Array.from({ length: 200 }, (_, i) => gustAt(i * 0.5));
+    const min = Math.min(...samples);
+    const max = Math.max(...samples);
+    expect(max - min).toBeGreaterThan(0.4);
+  });
+
+  it("does not repeat on a short, visible cycle", () => {
+    // Two incommensurable periods, so t and t+17s should differ.
+    for (const t of [3, 11, 29, 47]) {
+      expect(Math.abs(gustAt(t) - gustAt(t + 17))).toBeGreaterThan(0.01);
+    }
+  });
+
+  it("scales the slant it is applied to", () => {
+    const base = slantFor("rain", 40);
+    const cfgCalm = { kind: "rain", intensity: "moderate", width: 300, height: 300, wind: 40, gust: 0.6 } as const;
+    const cfgGusty = { ...cfgCalm, gust: 1.4 } as const;
+    const p = createParticle(cfgCalm, () => 0.5, true);
+    const calm = { ...p };
+    const gusty = { ...p };
+    stepParticle(calm, cfgCalm, 0.1, () => 0.5);
+    stepParticle(gusty, cfgGusty, 0.1, () => 0.5);
+    expect(gusty.x - p.x).toBeGreaterThan(calm.x - p.x);
+    expect(base).toBeGreaterThan(0);
   });
 });

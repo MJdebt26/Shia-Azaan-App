@@ -29,6 +29,8 @@ export interface FieldConfig {
   height: number;
   /** Wind speed in km/h. */
   wind: number;
+  /** Live gust multiplier from `gustAt`; 1 when unused. */
+  gust?: number;
 }
 
 /** Injectable so tests are deterministic; defaults to Math.random. */
@@ -87,6 +89,19 @@ export function slantFor(kind: WeatherKind, wind: number): number {
 }
 
 /**
+ * Gust multiplier at time `t` seconds.
+ *
+ * Steady wind is the giveaway that precipitation is fake — real rain surges and
+ * eases. Two incommensurable sine periods (17s and 7.3s) never repeat on a
+ * visible cycle, so the motion reads as weather rather than as a loop. Bounded
+ * to [0.55, 1.45] so a gust never yanks the field sideways.
+ */
+export function gustAt(t: number): number {
+  const g = 1 + 0.3 * Math.sin(t / 2.7) + 0.15 * Math.sin(t / 1.16 + 1.3);
+  return Math.min(1.45, Math.max(0.55, g));
+}
+
+/**
  * @param initial true when filling an empty field: particles are scattered
  *   through the full height so the first frame is not one curtain at the top.
  */
@@ -126,7 +141,7 @@ export function stepParticle(
   dt: number,
   rng: Rng = Math.random,
 ): void {
-  const slant = slantFor(cfg.kind, cfg.wind);
+  const slant = slantFor(cfg.kind, cfg.wind) * (cfg.gust ?? 1);
   p.y += p.speed * dt;
   p.x += slant * p.depth * dt;
 
@@ -155,7 +170,7 @@ export function streakEndpoints(
   p: Particle,
   cfg: FieldConfig,
 ): { x1: number; y1: number; x2: number; y2: number } {
-  const vx = slantFor(cfg.kind, cfg.wind) * p.depth;
+  const vx = slantFor(cfg.kind, cfg.wind) * (cfg.gust ?? 1) * p.depth;
   const vy = p.speed;
   const mag = Math.hypot(vx, vy) || 1;
   const len = p.length * (cfg.kind === "drizzle" ? 0.55 : 1);

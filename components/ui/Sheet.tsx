@@ -82,11 +82,20 @@ export function Sheet({
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
 
-    // Focus the first control once the entry transition has settled.
+    // Move focus into the sheet once the entry transition has settled, but to
+    // the panel itself — never to the first control.
+    //
+    // Focusing the first button used to fire 220ms after open, which is exactly
+    // when a user has already tapped the city search box. It yanked focus off
+    // the input and closed the keyboard mid-tap, so typing a location was
+    // impossible on a phone. The panel is `tabIndex={-1}`, so focusing it keeps
+    // the focus trap and screen-reader context without touching any control.
     const id = window.setTimeout(() => {
       const panel = panelRef.current;
-      const target = panel?.querySelector<HTMLElement>(FOCUSABLE);
-      (target ?? panel)?.focus();
+      if (!panel) return;
+      // If the user got there first, leave their focus exactly where it is.
+      if (panel.contains(document.activeElement)) return;
+      panel.focus();
     }, 220);
 
     return () => {

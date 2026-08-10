@@ -19,7 +19,7 @@ export function AlertBanner({
     <div
       role="status"
       aria-live="polite"
-      className={`fixed left-1/2 top-3 z-[60] flex w-[min(92vw,420px)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-positive-deep bg-gradient-to-b from-[#16341f] to-[#0f2417] px-4 py-3 text-ink shadow-lg transition-all duration-300 ${
+      className={`app-toast fixed left-1/2 z-[60] flex w-[min(92vw,420px)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-positive-deep bg-gradient-to-b from-[#16341f] to-[#0f2417] px-4 py-3 text-ink shadow-lg transition-all duration-300 ${
         banner
           ? "translate-y-0 opacity-100"
           : "pointer-events-none -translate-y-[160%] opacity-0"

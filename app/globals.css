@@ -127,12 +127,24 @@
    */
   .app-main {
     padding-top: max(1.25rem, calc(env(safe-area-inset-top) + 0.75rem));
+    /*
+     * Must clear the fixed tab bar *and* the home indicator, or the last card
+     * in Settings is unreachable. The bar is ~68px of content, so 6rem of
+     * clearance plus the inset leaves a comfortable margin rather than an
+     * exact fit that a font-size change could break.
+     */
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
   }
 
   @media (min-width: 640px) {
     .app-main {
       padding-top: max(1.75rem, calc(env(safe-area-inset-top) + 0.75rem));
     }
+  }
+
+  /* Toasts must clear the notch too — `top: 12px` puts them under it. */
+  .app-toast {
+    top: calc(env(safe-area-inset-top) + 0.75rem);
   }
 
   body {
@@ -244,15 +256,24 @@
 
   /* --- weather ---------------------------------------------------------- */
 
-  /* Cloud bands drift across and wrap. Kept on the compositor by animating
-     only `transform`, so a permanently-visible animation costs no layout. */
+  /*
+   * Cloud bands.
+   *
+   * Flat ellipses read as fog, not cloud. Each band stacks several
+   * differently-sized radial blobs at different vertical offsets, so the edge
+   * is lumpy the way a real cloud's is, and a heavy blur fuses them into one
+   * soft mass. Bands run at different speeds for parallax.
+   *
+   * Only `transform` is animated, so this stays on the compositor and costs no
+   * layout however long it runs.
+   */
   .weather-cloud-band {
     position: absolute;
-    left: -60%;
-    width: 220%;
-    height: 44%;
+    left: -70%;
+    width: 240%;
+    height: 52%;
     background-repeat: no-repeat;
-    filter: blur(14px);
+    filter: blur(18px);
     will-change: transform;
     animation-name: cloud-drift;
     animation-timing-function: linear;
@@ -264,7 +285,26 @@
       transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translate3d(38%, 0, 0);
+      transform: translate3d(34%, 0, 0);
+    }
+  }
+
+  /* A slow vertical swell, so the mass is never perfectly rigid. */
+  .weather-cloud-band::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: inherit;
+    opacity: 0.55;
+    animation: cloud-swell 23s ease-in-out infinite alternate;
+  }
+
+  @keyframes cloud-swell {
+    from {
+      transform: translate3d(0, -4%, 0) scale(1);
+    }
+    to {
+      transform: translate3d(0, 4%, 0) scale(1.09);
     }
   }
 
