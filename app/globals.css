@@ -361,7 +361,15 @@
       transparent 78%
     );
     opacity: 0.5;
-    transition: background var(--dur-slow) ease, opacity var(--dur-slow) ease;
+    /*
+     * Only opacity is transitioned, never `background`. Animating a gradient is
+     * a 1.2s main-thread repaint of the whole fixed viewport layer; if the sky
+     * colour happens to change mid-scroll, that repaint lands on the scroll and
+     * iOS drops the gesture. The gradient's stops are CSS variables, so when the
+     * sun or the weather shifts them the wash simply re-paints once, instantly,
+     * with no per-frame cost.
+     */
+    transition: opacity var(--dur-slow) ease;
   }
 
   :root[data-theme="light"] .sky-ambient {

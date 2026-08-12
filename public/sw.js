@@ -15,7 +15,12 @@
 
 /* eslint-disable no-restricted-globals */
 
-const VERSION = "v2";
+// Bumped whenever shipped assets change in a way a stale cache would hide.
+// The activate handler deletes every cache not on this version, and the worker
+// claims open clients — so an installed Home Screen PWA, which iOS will happily
+// keep booting from its old snapshot, is forced onto the new bundle instead of
+// serving last week's code forever.
+const VERSION = "v3";
 const SHELL_CACHE = `awqat-shell-${VERSION}`;
 const RUNTIME_CACHE = `awqat-runtime-${VERSION}`;
 const AUDIO_CACHE = `awqat-audio-${VERSION}`;

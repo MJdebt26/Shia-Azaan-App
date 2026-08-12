@@ -77,7 +77,12 @@ export function TabBar({
   return (
     <nav
       aria-label="Sections"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/85 backdrop-blur-xl"
+      // Opaque, not translucent-plus-blur. A fixed, full-width backdrop-blur
+      // pinned over a long scrolling page is the single most expensive thing to
+      // ask iOS Safari to composite — it re-rasterises on every scroll frame,
+      // and on a phone that shows up as a page that will not move. The bar sits
+      // over the sky-tinted background, so near-opaque reads the same.
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-bg/95"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto flex max-w-app">
