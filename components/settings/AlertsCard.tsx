@@ -243,6 +243,15 @@ export function AlertsCard({
             above.
           </Callout>
         )}
+
+        {ALERTABLE.some((key) => alerts[key].mode === "sound") && (
+          <Callout icon={<IconInfo size={15} />}>
+            The full adhan plays while Awqāt is open or in the background. No
+            browser lets a web app play a recitation once it is fully closed —
+            so at prayer time a closed app shows a notification with your
+            phone&apos;s own alert sound instead of the adhan.
+          </Callout>
+        )}
       </Card>
 
       <AdhanPicker

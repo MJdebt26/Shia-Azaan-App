@@ -5,6 +5,7 @@ import {
   useEffect,
   useId,
   useRef,
+  useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
@@ -65,6 +66,43 @@ const subscribeNoop = (): (() => void) => () => {};
 const onClient = (): boolean => true;
 const onServer = (): boolean => false;
 
+/**
+ * Tracks the software keyboard via the visual viewport.
+ *
+ * `dvh` does not shrink when the iOS keyboard opens — the keyboard is painted
+ * over the viewport, not subtracted from it — so a `bottom: 0` sheet keeps its
+ * full height and its lower half, including the search results, ends up behind
+ * the keyboard. `window.visualViewport` is the one API that reports the region
+ * actually visible above it. `inset` is how much the keyboard covers; `height`
+ * is the visible height to cap the sheet to.
+ */
+function useKeyboardInset(): { inset: number; height: number } {
+  const [state, setState] = useState({ inset: 0, height: 0 });
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      setState({
+        inset: Math.max(0, window.innerHeight - vv.height - vv.offsetTop),
+        height: vv.height,
+      });
+    };
+    // Deferred out of the effect body so the first read is not a synchronous
+    // set-state during commit.
+    const raf = requestAnimationFrame(update);
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      cancelAnimationFrame(raf);
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  return state;
+}
+
 export function Sheet({
   open,
   onClose,
@@ -79,6 +117,7 @@ export function Sheet({
   const descId = useId();
   // Portals need a DOM; render nothing until we are on the client.
   const mounted = useSyncExternalStore(subscribeNoop, onClient, onServer);
+  const keyboard = useKeyboardInset();
 
   /**
    * Callers pass `onClose` as an inline arrow, so it is a new function on every
@@ -189,7 +228,18 @@ export function Sheet({
         className={`fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[86dvh] w-full max-w-app flex-col rounded-t-3xl border border-b-0 border-line-strong bg-bg-deep shadow-lg transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
-        style={{ transitionTimingFunction: "var(--ease-out)" }}
+        style={{
+          transitionTimingFunction: "var(--ease-out)",
+          // Sit above the keyboard, and shrink to the space left over, so the
+          // results scroll within view instead of behind it. Only while open —
+          // a closed sheet must stay flush at the bottom to slide away cleanly.
+          ...(open && keyboard.inset > 0
+            ? {
+                bottom: keyboard.inset,
+                maxHeight: `${Math.round(keyboard.height - 12)}px`,
+              }
+            : null),
+        }}
       >
         <div className="flex-shrink-0 px-5 pt-3">
           <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line-strong" />
