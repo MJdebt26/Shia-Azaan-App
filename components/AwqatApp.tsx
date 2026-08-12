@@ -413,7 +413,16 @@ export default function AwqatApp() {
         <Footnote />
       </main>
 
-      <TabBar active={tab} onChange={setTab} />
+      <TabBar
+        active={tab}
+        onChange={(id) => {
+          setTab(id);
+          // The tap that opens Qibla is itself a user gesture, which is all iOS
+          // needs to re-grant motion access. Reusing it means a returning user
+          // never has to press "Enable live compass" again.
+          if (id === "qibla") compass.resumeFromGesture();
+        }}
+      />
 
       <LocationSheet
         open={locationOpen}

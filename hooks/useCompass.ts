@@ -56,6 +56,13 @@ export interface UseCompass {
   supported: boolean;
   /** Ask for access and start listening. Must be called from a user gesture. */
   enable: () => Promise<void>;
+  /**
+   * Re-arm silently from an incidental gesture (e.g. the tap that opens the
+   * Qibla tab). Only acts for someone who has granted before, so a first-timer
+   * still meets the explicit button and its explanation rather than a surprise
+   * system prompt. A no-op on platforms that never needed a grant.
+   */
+  resumeFromGesture: () => void;
   error: string | null;
 }
 
@@ -100,6 +107,31 @@ function orientationEventCtor(): DeviceOrientationEventCtor | null {
   if (typeof window === "undefined") return null;
   if (typeof window.DeviceOrientationEvent === "undefined") return null;
   return window.DeviceOrientationEvent as unknown as DeviceOrientationEventCtor;
+}
+
+/**
+ * Whether the user has granted motion access before, persisted so a returning
+ * visitor never has to hunt for the button again. iOS still requires a fresh
+ * user gesture each session before it will (silently, this time) re-grant, so
+ * this flag is what lets us reuse an incidental one.
+ */
+const REMEMBER_KEY = "awqat.compass.enabled";
+
+function rememberedGrant(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(REMEMBER_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistGrant(): void {
+  try {
+    window.localStorage.setItem(REMEMBER_KEY, "1");
+  } catch {
+    /* private mode: the compass still works this session, just not remembered */
+  }
 }
 
 /** How far the rendered page is rotated from the device's natural orientation. */
@@ -165,6 +197,13 @@ export function useCompass(): UseCompass {
   const samples = useRef<number[]>([]);
   const lastEmit = useRef(0);
   const lastHeading = useRef<number | null>(null);
+
+  // Read inside the gesture callback below, which must not close over a stale
+  // `granted`.
+  const grantedRef = useRef(granted);
+  useEffect(() => {
+    grantedRef.current = granted;
+  }, [granted]);
 
   useEffect(() => {
     if (!listening || typeof window === "undefined") return;
@@ -246,6 +285,7 @@ export function useCompass(): UseCompass {
       return;
     }
     if (typeof ctor.requestPermission !== "function") {
+      persistGrant();
       setGranted(true);
       return;
     }
@@ -253,6 +293,7 @@ export function useCompass(): UseCompass {
       const result = await ctor.requestPermission();
       if (result === "granted") {
         setError(null);
+        persistGrant();
         setGranted(true);
       } else {
         setError(
@@ -265,5 +306,24 @@ export function useCompass(): UseCompass {
     }
   }, []);
 
-  return { heading, accuracy, needsPermission, supported, enable, error };
+  const resumeFromGesture = useCallback(() => {
+    // Already live this session, or a platform that streams without asking:
+    // nothing to do.
+    if (grantedRef.current) return;
+    const ctor = orientationEventCtor();
+    if (!ctor || typeof ctor.requestPermission !== "function") return;
+    // Only returning users are re-armed silently; first-timers get the button.
+    if (!rememberedGrant()) return;
+    void enable();
+  }, [enable]);
+
+  return {
+    heading,
+    accuracy,
+    needsPermission,
+    supported,
+    enable,
+    resumeFromGesture,
+    error,
+  };
 }
